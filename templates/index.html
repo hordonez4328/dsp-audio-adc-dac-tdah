@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSP Audio Lab: ADC/DAC, Separación de Voz/Instrumentos y Efectos en el Cerebro</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .tab-btn.active {
+            border-bottom: 3px solid #3b82f6;
+            color: #1d4ed8;
+            font-weight: 700;
+        }
+        audio {
+            width: 100%;
+            height: 38px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- Header Principal -->
+    <header class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-blue-600 rounded-xl shadow-md text-white">
+                    <i class="fa-solid fa-wave-square text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black tracking-tight">DSP Audio Lab & Brain Acoustics</h1>
+                    <p class="text-xs text-blue-200">Comunicaciones 1 • ADC - DAC, Muestreo Nyquist, Separación y Neuroacústica</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 text-xs bg-slate-800/80 px-4 py-2 rounded-lg border border-slate-700">
+                <span class="flex h-2.5 w-2.5 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span>Servidor Local Activo: <strong>http://127.0.0.1:5000</strong></span>
+            </div>
+        </div>
+
+        <!-- Barra de Navegación por Pestañas -->
+        <div class="max-w-7xl mx-auto px-6 flex overflow-x-auto border-t border-slate-800">
+            <button onclick="cambiarTab('tab-carga')" id="btn-tab-carga" class="tab-btn active py-3 px-5 text-sm font-medium text-slate-300 hover:text-white flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-upload"></i> 1. Cargar Audio y Género
+            </button>
+            <button onclick="cambiarTab('tab-separacion')" id="btn-tab-separacion" class="tab-btn py-3 px-5 text-sm font-medium text-slate-300 hover:text-white flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-sliders"></i> 2. Separar Voz e Instrumentos
+            </button>
+            <button onclick="cambiarTab('tab-dsp')" id="btn-tab-dsp" class="tab-btn py-3 px-5 text-sm font-medium text-slate-300 hover:text-white flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-chart-line"></i> 3. ADC - DAC y Nyquist
+            </button>
+            <button onclick="cambiarTab('tab-cerebro')" id="btn-tab-cerebro" class="tab-btn py-3 px-5 text-sm font-medium text-slate-300 hover:text-white flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-brain"></i> 4. Efecto Cerebral y TDAH
+            </button>
+            <button onclick="cambiarTab('tab-comparativa')" id="btn-tab-comparativa" class="tab-btn py-3 px-5 text-sm font-medium text-slate-300 hover:text-white flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-layer-group"></i> 5. Comparativa 5 Géneros
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-6">
+
+        <!-- ====================================================================================== -->
+        <!-- PESTAÑA 1: CARGAR AUDIO Y SELECCIONAR GÉNERO -->
+        <!-- ====================================================================================== -->
+        <section id="tab-carga" class="tab-content block">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Panel de Carga -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 lg:col-span-1 flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-compact-disc text-blue-600"></i> Selector de Canción
+                        </h2>
+
+                        <!-- Modo 1: Biblioteca de Referencia -->
+                        <div class="mb-5">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Seleccionar de Biblioteca:</label>
+                            <select id="select-cancion" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="">Cargando canciones...</option>
+                            </select>
+                        </div>
+
+                        <!-- Modo 2: Subir archivo WAV propio -->
+                        <div class="mb-5">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">O Subir tu propia canción (.WAV):</label>
+                            <input type="file" id="input-archivo" accept=".wav" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                        </div>
+
+                        <!-- Selección de Género -->
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Género Musical de la Canción:</label>
+                            <select id="select-genero" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="Clásica - Barroca">Clásica - Barroca (Bach / Cuerdas)</option>
+                                <option value="Metal">Metal (Thrash / Metallica)</option>
+                                <option value="Salsa">Salsa (Héctor Lavoe / Colón)</option>
+                                <option value="Cantina al hombro">Cantina al hombro (Darío Gómez / Despecho)</option>
+                                <option value="Reggaeton">Reggaeton (Daddy Yankee / Dembow)</option>
+                                <option value="Personalizado">Otro / Personalizado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="ejecutarCarga()" id="btn-cargar-audio" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> Cargar y Procesar Señal
+                    </button>
+                </div>
+
+                <!-- Ficha Técnica y Reproductor de Audio -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 mb-4 gap-3">
+                        <div>
+                            <span id="badge-genero" class="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">Clásica - Barroca</span>
+                            <h3 id="txt-obra" class="text-xl font-black text-slate-900 mt-2">Cargando datos...</h3>
+                            <p id="txt-musico" class="text-sm text-slate-600">Johann Sebastian Bach</p>
+                        </div>
+                        <!-- Reproductor HTML5 -->
+                        <div class="w-full sm:w-64 bg-slate-100 p-2.5 rounded-xl border border-slate-300">
+                            <span class="text-xs font-bold text-slate-500 mb-1 block flex items-center gap-1">
+                                <i class="fa-solid fa-volume-high text-blue-600"></i> Audio Original:
+                            </span>
+                            <audio id="player-original" controls class="w-full"></audio>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica de Señal Continua x(t) y FFT -->
+                    <div class="mb-4">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Visualización Señal Analógica x(t) y Espectro FFT:</h4>
+                        <div id="contenedor-grafica-senal" class="bg-slate-50 rounded-xl p-2 border border-slate-200 flex justify-center items-center min-h-[260px]">
+                            <img id="img-grafica-senal" src="" alt="Gráfica Señal" class="w-full rounded-lg shadow-sm">
+                        </div>
+                    </div>
+
+                    <!-- Ficha Resumen de Métricas DSP -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <span class="block text-xs font-medium text-slate-500">Muestreo (fs)</span>
+                            <span id="dsp-fs" class="text-base font-bold text-slate-800">44100 Hz</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <span class="block text-xs font-medium text-slate-500">Nyquist (fs/2)</span>
+                            <span id="dsp-nyq" class="text-base font-bold text-purple-700">22050 Hz</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <span class="block text-xs font-medium text-slate-500">Frec. Máx (99%)</span>
+                            <span id="dsp-fmax" class="text-base font-bold text-emerald-700">-- Hz</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <span class="block text-xs font-medium text-slate-500">Centroide</span>
+                            <span id="dsp-centroide" class="text-base font-bold text-blue-700">-- Hz</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ====================================================================================== -->
+        <!-- PESTAÑA 2: SEPARACIÓN DE INSTRUMENTOS Y VOZ -->
+        <!-- ====================================================================================== -->
+        <section id="tab-separacion" class="tab-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 mb-6 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-guitar text-emerald-600"></i> Separador de Fuentes de Audio DSP
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">Aísla por separado la voz principal, los bajos, instrumentos melódicos y percusión mediante filtros Butterworth IIR.</p>
+                    </div>
+                    <button onclick="ejecutarSeparacion()" id="btn-separar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition duration-200 flex items-center gap-2 self-start md:self-auto">
+                        <i class="fa-solid fa-bolt"></i> Separar Pistas en WAV
+                    </button>
+                </div>
+
+                <!-- Reproductores de las 4 Pistas Aisladas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- 1. Voz -->
+                    <div class="p-4 rounded-xl bg-red-50 border border-red-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-red-900 flex items-center gap-2">
+                                <i class="fa-solid fa-microphone text-red-600"></i> 1. Voz Principal (300 - 3400 Hz)
+                            </span>
+                            <a id="descarga-voz" href="#" download class="text-xs bg-red-200 hover:bg-red-300 text-red-800 px-2.5 py-1 rounded-md font-semibold">Descargar WAV</a>
+                        </div>
+                        <audio id="player-voz" controls class="w-full"></audio>
+                    </div>
+
+                    <!-- 2. Bajos -->
+                    <div class="p-4 rounded-xl bg-blue-50 border border-blue-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-blue-900 flex items-center gap-2">
+                                <i class="fa-solid fa-drum text-blue-600"></i> 2. Bajos y Bombos (20 - 260 Hz)
+                            </span>
+                            <a id="descarga-bajos" href="#" download class="text-xs bg-blue-200 hover:bg-blue-300 text-blue-800 px-2.5 py-1 rounded-md font-semibold">Descargar WAV</a>
+                        </div>
+                        <audio id="player-bajos" controls class="w-full"></audio>
+                    </div>
+
+                    <!-- 3. Medios / Cuerdas -->
+                    <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                                <i class="fa-solid fa-music text-emerald-600"></i> 3. Instrumentos Melódicos / Cuerdas
+                            </span>
+                            <a id="descarga-medios" href="#" download class="text-xs bg-emerald-200 hover:bg-emerald-300 text-emerald-800 px-2.5 py-1 rounded-md font-semibold">Descargar WAV</a>
+                        </div>
+                        <audio id="player-medios" controls class="w-full"></audio>
+                    </div>
+
+                    <!-- 4. Agudos / Platillos -->
+                    <div class="p-4 rounded-xl bg-purple-50 border border-purple-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-purple-900 flex items-center gap-2">
+                                <i class="fa-solid fa-bell text-purple-600"></i> 4. Percusión de Agudos y Platillos (> 5 kHz)
+                            </span>
+                            <a id="descarga-agudos" href="#" download class="text-xs bg-purple-200 hover:bg-purple-300 text-purple-800 px-2.5 py-1 rounded-md font-semibold">Descargar WAV</a>
+                        </div>
+                        <audio id="player-agudos" controls class="w-full"></audio>
+                    </div>
+                </div>
+
+                <!-- Gráfica de Formas de Onda de las Pistas -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Gráficas Temporales de Cada Fuente Aislada:</h4>
+                    <div class="bg-slate-50 rounded-xl p-2 border border-slate-200 flex justify-center items-center min-h-[300px]">
+                        <img id="img-grafica-stems" src="" alt="Gráfica de Pistas Separadas" class="w-full rounded-lg shadow-sm">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================================================== -->
+        <!-- PESTAÑA 3: DSP, ADC - DAC Y CUANTIZACIÓN -->
+        <!-- ====================================================================================== -->
+        <section id="tab-dsp" class="tab-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 mb-6 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-microchip text-indigo-600"></i> Cuantización Uniforme para ADC - DAC
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">Modifique la resolución en bits y observe el escalonamiento, resolución LSB en Voltios y el SQNR experimental.</p>
+                    </div>
+                    
+                    <!-- Control Slider de Bits -->
+                    <div class="flex items-center gap-4 bg-slate-50 px-5 py-3 rounded-xl border border-slate-200">
+                        <label class="text-sm font-bold text-slate-700">Resolución Bits (B):</label>
+                        <input type="range" id="slider-bits" min="2" max="16" value="4" oninput="cambiarBits(this.value)" class="w-40 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        <span id="valor-bits" class="text-lg font-black text-indigo-600 w-8 text-center">4</span>
+                    </div>
+                </div>
+
+                <!-- Métricas de Cuantización -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl text-center">
+                        <span class="block text-xs font-bold text-indigo-700 uppercase">Niveles (2^B)</span>
+                        <span id="q-niveles" class="text-xl font-black text-indigo-900">16</span>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
+                        <span class="block text-xs font-bold text-blue-700 uppercase">Resolución Δ (LSB)</span>
+                        <span id="q-delta" class="text-xl font-black text-blue-900">133.33 mV</span>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-center">
+                        <span class="block text-xs font-bold text-amber-700 uppercase">Factor de Escala</span>
+                        <span id="q-factor" class="text-xl font-black text-amber-900">133.33 mV/bit</span>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-center">
+                        <span class="block text-xs font-bold text-emerald-700 uppercase">SQNR Medido</span>
+                        <span id="q-sqnr" class="text-xl font-black text-emerald-900">25.84 dB</span>
+                    </div>
+                </div>
+
+                <!-- Gráfica de Cuantización y Error -->
+                <div class="bg-slate-50 rounded-xl p-2 border border-slate-200 flex justify-center items-center min-h-[350px]">
+                    <img id="img-grafica-cuantizacion" src="" alt="Gráfica Cuantización" class="w-full rounded-lg shadow-sm">
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================================================== -->
+        <!-- PESTAÑA 4: EFECTOS EN EL CEREBRO, EMOCIONES Y TDAH -->
+        <!-- ====================================================================================== -->
+        <section id="tab-cerebro" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Diagnóstico y Estado Predominante -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 lg:col-span-1 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-purple-600 bg-purple-100 px-3 py-1 rounded-full">Neuroacústica Aplicada</span>
+                        <h2 id="txt-estado-predominante" class="text-2xl font-black text-slate-900 mt-4 mb-2">CONCENTRADO</h2>
+                        <p id="txt-desc-cerebro" class="text-sm text-slate-600 leading-relaxed mb-6">Descripción neuropsicológica del estímulo sonoro.</p>
+
+                        <div class="space-y-4">
+                            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                                <span class="block text-xs font-bold text-slate-500">Neurotransmisores Activados:</span>
+                                <span id="txt-neurotransmisores" class="text-sm font-semibold text-slate-800">Dopamina, Acetilcolina</span>
+                            </div>
+                            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                                <span class="block text-xs font-bold text-slate-500">Actividad Ideal Recomendada:</span>
+                                <span id="txt-actividad-ideal" class="text-sm font-semibold text-slate-800">Estudio reflexivo</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <span class="text-xs font-bold text-amber-800 block mb-1">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Impacto en Estudiantes con TDAH (TDH):
+                        </span>
+                        <p id="txt-advertencia-tdah" class="text-xs text-amber-900 font-medium">Recomendación terapéutica para la concentración.</p>
+                    </div>
+                </div>
+
+                <!-- Barras Emocionales y Ondas Cerebrales -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 lg:col-span-2 space-y-6">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-heart-pulse text-red-500"></i> ¿Cómo afecta el ánimo y la emoción?
+                        </h3>
+                        <div id="contenedor-barras-emociones" class="space-y-3">
+                            <!-- Inyectado por JS -->
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-200">
+                        <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-brain text-purple-600"></i> Estimulación de Ondas Cerebrales (EEG)
+                        </h3>
+                        <div id="contenedor-barras-ondas" class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                            <!-- Inyectado por JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ====================================================================================== -->
+        <!-- PESTAÑA 5: COMPARATIVA GENERAL DE LOS 5 GÉNEROS -->
+        <!-- ====================================================================================== -->
+        <section id="tab-comparativa" class="tab-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="pb-4 border-b border-slate-200 mb-6">
+                    <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-blue-600"></i> Comparativa Espectral Integrada y Dictamen TDAH
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">Contraste simultáneo de las 5 señales en tiempo, FFT, distribución por bandas y adecuación para el déficit atencional.</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 flex justify-center items-center">
+                    <img src="/graficas/comparativa_general_generos_y_tdah.png" alt="Comparativa de los 5 Géneros" class="w-full max-w-5xl rounded-lg shadow-md">
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Script de Control Interactivo Frontend -->
+    <script>
+        function cambiarTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('active');
+        }
+
+        async function cargarBiblioteca() {
+            try {
+                const res = await fetch('/api/biblioteca');
+                const data = await res.json();
+                const sel = document.getElementById('select-cancion');
+                sel.innerHTML = '';
+                data.canciones.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    if (c === data.actual) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                
+                sel.addEventListener('change', () => {
+                    const val = sel.value.toLowerCase();
+                    const genSel = document.getElementById('select-genero');
+                    if (val.includes('clasica') || val.includes('barroca')) genSel.value = 'Clásica - Barroca';
+                    else if (val.includes('metal')) genSel.value = 'Metal';
+                    else if (val.includes('salsa')) genSel.value = 'Salsa';
+                    else if (val.includes('cantina') || val.includes('carrilera')) genSel.value = 'Cantina al hombro';
+                    else if (val.includes('reggaeton')) genSel.value = 'Reggaeton';
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function ejecutarCarga() {
+            const btn = document.getElementById('btn-cargar-audio');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando Audio...';
+            btn.disabled = true;
+
+            const inputArchivo = document.getElementById('input-archivo');
+            const selectCancion = document.getElementById('select-cancion');
+            const selectGenero = document.getElementById('select-genero');
+
+            const formData = new FormData();
+            formData.append('genero', selectGenero.value);
+
+            if (inputArchivo.files.length > 0) {
+                formData.append('tipo', 'upload');
+                formData.append('archivo', inputArchivo.files[0]);
+            } else {
+                formData.append('tipo', 'preset');
+                formData.append('cancion', selectCancion.value);
+            }
+
+            try {
+                const res = await fetch('/api/cargar_audio', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+
+                // Actualizar interfaz con datos cargados
+                document.getElementById('badge-genero').textContent = data.genero;
+                document.getElementById('txt-obra').textContent = data.investigacion.obra + ' (' + data.investigacion.ano_obra + ')';
+                document.getElementById('txt-musico').textContent = data.investigacion.musico_compositor + ' • ' + data.investigacion.tipo_agrupacion;
+                
+                const player = document.getElementById('player-original');
+                player.src = data.url_audio;
+                player.load();
+
+                document.getElementById('img-grafica-senal').src = data.grafica_senal;
+
+                document.getElementById('dsp-fs').textContent = data.dsp.fs + ' Hz';
+                document.getElementById('dsp-nyq').textContent = data.dsp.f_nyquist + ' Hz';
+                document.getElementById('dsp-fmax').textContent = data.dsp.f_max_efectiva.toFixed(1) + ' Hz';
+                document.getElementById('dsp-centroide').textContent = data.dsp.centroide_hz.toFixed(1) + ' Hz';
+
+                // Disparar actualización inicial de cuantización y cerebro
+                cambiarBits(document.getElementById('slider-bits').value);
+                actualizarCerebro();
+
+            } catch (e) {
+                alert('Ocurrió un error al cargar el audio: ' + e);
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> Cargar y Procesar Señal';
+                btn.disabled = false;
+            }
+        }
+
+        async function cambiarBits(bits) {
+            document.getElementById('valor-bits').textContent = bits;
+            try {
+                const res = await fetch('/api/cuantizar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({bits: parseInt(bits)})
+                });
+                const data = await res.json();
+                if (data.error) return;
+
+                document.getElementById('q-niveles').textContent = data.niveles;
+                document.getElementById('q-delta').textContent = data.delta_mv.toFixed(2) + ' mV';
+                document.getElementById('q-factor').textContent = data.factor_escala_mv_bit.toFixed(2) + ' mV/bit';
+                document.getElementById('q-sqnr').textContent = data.sqnr_medido_db.toFixed(2) + ' dB';
+                document.getElementById('img-grafica-cuantizacion').src = data.grafica_cuantizacion;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function ejecutarSeparacion() {
+            const btn = document.getElementById('btn-separar');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Separando fuentes...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/separar_audio', {method: 'POST'});
+                const data = await res.json();
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+
+                document.getElementById('img-grafica-stems').src = data.grafica_stems;
+
+                // Cargar reproductores y descargas
+                const setPista = (idPlayer, idDescarga, clave) => {
+                    const p = data.pistas[clave];
+                    if (p) {
+                        const audioEl = document.getElementById(idPlayer);
+                        audioEl.src = p.url;
+                        audioEl.load();
+                        const linkEl = document.getElementById(idDescarga);
+                        linkEl.href = p.url;
+                        linkEl.setAttribute('download', p.archivo);
+                    }
+                };
+
+                setPista('player-voz', 'descarga-voz', 'voz_principal');
+                setPista('player-bajos', 'descarga-bajos', 'bajos_y_bombos');
+                setPista('player-medios', 'descarga-medios', 'instrumentos_medios');
+                setPista('player-agudos', 'descarga-agudos', 'percusion_y_agudos');
+
+                alert('¡Separación completada con éxito! Ya puede escuchar y descargar cada instrumento por separado.');
+            } catch (e) {
+                alert('Error al separar: ' + e);
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Separar Pistas en WAV';
+                btn.disabled = false;
+            }
+        }
+
+        async function actualizarCerebro() {
+            try {
+                const res = await fetch('/api/efecto_cerebro');
+                const imp = await res.json();
+
+                document.getElementById('txt-estado-predominante').textContent = imp.estado_predominante;
+                document.getElementById('txt-desc-cerebro').textContent = imp.descripcion_emocional;
+                document.getElementById('txt-neurotransmisores').textContent = imp.neurotransmisores;
+                document.getElementById('txt-actividad-ideal').textContent = imp.actividad_ideal;
+                document.getElementById('txt-advertencia-tdah').textContent = imp.advertencia;
+
+                // Renderizar barras emocionales
+                const contEmo = document.getElementById('contenedor-barras-emociones');
+                contEmo.innerHTML = '';
+                const colores = {
+                    "Concentrado / Foco": "bg-blue-600",
+                    "Contento / Alegre": "bg-emerald-500",
+                    "Triste / Melancólico": "bg-purple-600",
+                    "Hiperactivo / Impulsivo": "bg-amber-500",
+                    "Enérgico / Tensión": "bg-red-500"
+                };
+
+                for (const [k, v] of Object.entries(imp.puntuaciones)) {
+                    const col = colores[k] || "bg-blue-600";
+                    contEmo.innerHTML += `
+                        <div>
+                            <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                                <span>${k}</span>
+                                <span>${v}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200">
+                                <div class="${col} h-3 rounded-full transition-all duration-500" style="width: ${v}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Renderizar ondas cerebrales
+                const contOndas = document.getElementById('contenedor-barras-ondas');
+                contOndas.innerHTML = '';
+                for (const [onda, pct] of Object.entries(imp.ondas_cerebrales)) {
+                    const nombreOnda = onda.split(' ')[0];
+                    contOndas.innerHTML += `
+                        <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl text-center flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 block">${nombreOnda}</span>
+                                <span class="text-[10px] text-slate-400 block mb-2">${onda.substring(nombreOnda.length)}</span>
+                            </div>
+                            <div>
+                                <div class="w-full bg-slate-200 rounded-full h-2 mb-2 overflow-hidden">
+                                    <div class="bg-indigo-600 h-2 rounded-full" style="width: ${pct}%"></div>
+                                </div>
+                                <span class="text-xs font-black text-indigo-700">${pct}%</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Inicialización al cargar la página
+        window.addEventListener('DOMContentLoaded', async () => {
+            await cargarBiblioteca();
+            await ejecutarCarga();
+        });
+    </script>
+</body>
+</html>

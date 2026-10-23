@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Caches and virtual environments
+.env
+venv/
+.venv/
+env/
+ENV/
+
+# Archivos de audio binarios pesados (evita exceder el límite de 100MB de GitHub)
+# Los audios de prueba se pueden generar automáticamente con: python generar_audios_muestras.py
+audios/*.wav
+audios/*.mp3
+pistas_separadas/*.wav
+pistas_separadas/*.mp3
+
+# Mantener la estructura de carpetas en Git
+!audios/.gitkeep
+!pistas_separadas/.gitkeep
+
+# IDEs y archivos de sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
